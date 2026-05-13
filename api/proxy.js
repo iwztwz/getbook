@@ -23,6 +23,8 @@ app.all('/*', async (req, res) => {
   }
 
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
     const resp = await fetch(targetUrl, {
       method: req.method,
       headers: {
@@ -31,23 +33,16 @@ app.all('/*', async (req, res) => {
         'Accept-Language': req.headers['accept-language'] || 'zh-CN,zh;q=0.9',
         'Referer': req.headers['referer'] || '',
       },
-      redirect: 'manual'
+      redirect: 'follow'
     });
+    clearTimeout(timeout);
 
     const respHeaders = {};
     resp.headers.forEach((val, key) => {
-      if (!['content-security-policy', 'x-frame-options', 'set-cookie'].includes(key)) {
+      if (!['content-security-policy', 'x-frame-options', 'set-cookie', 'content-encoding'].includes(key)) {
         respHeaders[key] = val;
       }
     });
-
-    if (resp.status >= 300 && resp.status < 400) {
-      const location = respHeaders['location'];
-      if (location) {
-        const newLocation = new URL(location, targetUrl).href;
-        respHeaders['location'] = `/${newLocation}`;
-      }
-    }
 
     const buf = Buffer.from(await resp.arrayBuffer());
     res.status(resp.status);
