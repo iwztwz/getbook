@@ -1,18 +1,21 @@
-module.exports = async (req, res) => {
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.all('/*', async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', '*');
-  
+
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
   }
 
-  const url = new URL(req.url, `http://${req.headers.host}`);
-  let targetUrl = url.pathname.slice(1) + url.search;
+  let targetUrl = req.path.slice(1) + req.url.slice(req.path.length);
 
   if (!targetUrl || targetUrl === 'favicon.ico') {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.status(200).end(`<h1>Vercel Proxy</h1><p>用法: /api/proxy/https://目标网站.com</p>`);
+    return res.status(200).end(`<h1>Proxy Ready</h1><p>用法: https://你的域名.com/https://目标网站.com</p>`);
   }
 
   if (!targetUrl.startsWith('http')) {
@@ -42,7 +45,7 @@ module.exports = async (req, res) => {
       const location = respHeaders['location'];
       if (location) {
         const newLocation = new URL(location, targetUrl).href;
-        respHeaders['location'] = `/api/proxy/${newLocation}`;
+        respHeaders['location'] = `/${newLocation}`;
       }
     }
 
@@ -53,4 +56,8 @@ module.exports = async (req, res) => {
   } catch (e) {
     res.status(500).end(`Proxy Error: ${e.message}`);
   }
-};
+});
+
+app.listen(PORT, () => {
+  console.log(`Proxy server running on port ${PORT}`);
+});
